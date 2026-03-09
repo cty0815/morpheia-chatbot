@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Morpheia ✦ 療癒精靈</title>
+    
+    <link rel="icon" type="image/png" href="/static/icon.png">
+    <link rel="apple-touch-icon" href="/static/icon.png">
+    
+    <style>
+        /* 共用背景色變數 */
+        :root {
+            --main-bg: linear-gradient(135deg, #1a1b4b 0%, #4a2f6e 50%, #b38b9d 100%);
+        }
+
+        /* ===== 進入動畫 ===== */
+        .splash-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('/static/AI背景.png') no-repeat center center fixed;
+            background-size: cover;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            animation: fadeOut 1s ease-in-out 4s forwards;
+            pointer-events: none;
+            overflow: hidden;
+        }
+        
+        @keyframes fadeOut {
+            0% { opacity: 1; }
+            100% { opacity: 0; visibility: hidden; }
+        }
+        
+        /* 影片容器 */
+        .video-container {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            /* 讓容器透明，避免黑底 */
+            background-color: transparent;
+        }
+        
+        .splash-video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            max-width: 100%;
+            max-height: 100%;
+            /* 影片自身透明 */
+            background-color: transparent;
+            /* 若需要可混合模式，但透明背景已足夠 */
+            mix-blend-mode: screen;
+        }
+        
+        /* 文字覆蓋層 */
+        .text-overlay {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            margin-top: auto;
+            margin-bottom: 100px;
+            pointer-events: none;
+        }
+        
+        .splash-title {
+            font-size: 48px;
+            color: white;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
+            margin-bottom: 20px;
+            letter-spacing: 4px;
+            opacity: 0;
+            animation: fadeIn 1s ease-in-out 0.5s forwards;
+        }
+        
+        .splash-subtitle {
+            font-size: 24px;
+            color: rgba(255, 255, 255, 0.95);
+            text-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
+            margin-bottom: 40px;
+            font-style: italic;
+            opacity: 0;
+            animation: fadeIn 1s ease-in-out 1s forwards;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* 星星背景 */
+        .star-container {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: 1;
+        }
+        
+        .splash-star {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            animation: starTwinkle 3s ease-in-out infinite;
+            opacity: 0;
+        }
+        
+        @keyframes starTwinkle {
+            0%, 100% { opacity: 0; transform: scale(0.5); }
+            50% { opacity: 0.8; transform: scale(1); }
+        }
+        
+        .progress-bar {
+            width: 300px;
+            height: 3px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 2px;
+            margin: 0 auto;
+            overflow: hidden;
+            opacity: 0;
+            animation: fadeIn 1s ease-in-out 1.5s forwards;
+            position: relative;
+            z-index: 10;
+            backdrop-filter: blur(5px);
+        }
+        
+        .progress-fill {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #ffd700, #ffffff);
+            animation: progress 3s linear forwards;
+            animation-delay: 1.5s;
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+        }
+        
+        @keyframes progress {
+            0% { width: 0%; }
+            100% { width: 100%; }
+        }
+        
+        /* ===== 游標樣式 ===== */
+        * {
+            cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'><circle cx='16' cy='16' r='14' fill='white' stroke='%23ffe484' stroke-width='2'/><path d='M22 8 A12 12 0 0 1 22 24 A10 10 0 0 1 6 16 A12 12 0 0 1 22 8' fill='%23ffe484' opacity='0.9'/></svg>") 16 16, auto !important;
+        }
+        
+        a, button, .page-icon, .tip-button, .chat-input button, .message-card, [onclick] {
+            cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'><circle cx='16' cy='16' r='14' fill='%23ffd700' stroke='white' stroke-width='2'/><path d='M22 8 A12 12 0 0 1 22 24 A10 10 0 0 1 6 16 A12 12 0 0 1 22 8' fill='white' opacity='0.9'/></svg>") 16 16, pointer !important;
+        }
+        
+        input, textarea {
+            cursor: text !important;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', 'Helvetica Neue', 'Apple Color Emoji', sans-serif;
+            /* 改為使用AI背景圖片 */
+            background: url('/static/AI背景.png') no-repeat center center fixed;
+            background-size: cover;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+        
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at 20% 30%, rgba(255,255,255,0.1) 0%, transparent 20%),
+                        radial-gradient(circle at 80% 70%, rgba(255,255,255,0.1) 0%, transparent 20%);
+            pointer-events: none;
+            animation: twinkle 8s infinite;
+            z-index: 0;
+        }
+        
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.8; }
+        }
+        
+        .page-icon {
+            position: fixed;
+            top: 30px;
+            right: 40px;
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            overflow: hidden;
+            /* 去除背景和白色圓圈 */
+            background: transparent;
+            backdrop-filter: none;
+            border: none;
+            box-shadow: none;
+            z-index: 1000;
+            transition: transform 0.3s ease;
+            cursor: pointer;
+        }
+        
+        /* hover pulse animation */
+        .page-icon:hover {
+            animation: hoverPulse 1s infinite alternate;
+            box-shadow: 0 0 60px rgba(255, 255, 255, 0.6);
+            border-color: rgba(255, 255, 255, 0.9);
+        }
+        
+        @keyframes hoverPulse {
+            0% { transform: scale(1.1) rotate(5deg); }
+            100% { transform: scale(1.15) rotate(7deg); }
+        }
+
+        /* click/bounce effect */
+        .page-icon.clicked {
+            animation: clickBounce 0.4s forwards;
+        }
+
+        @keyframes clickBounce {
+            0% { transform: scale(1); }
+            30% { transform: scale(1.3); }
+            60% { transform: scale(0.9); }
+            100% { transform: scale(1); }
+        }
+        
+        .page-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        
+        /* ===== 對話框 ===== */
+        .chat-container {
+            width: 100%;
+            max-width: 800px;
+            height: 85vh;
+            background: rgba(20, 15, 35, 0.4);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-radius: 48px;
+            box-shadow: 
+                0 25px 50px -12px rgba(0, 0, 0, 0.5),
+                0 0 0 1px rgba(255, 255, 255, 0.15) inset,
+                0 0 40px rgba(160, 130, 200, 0.2);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+            z-index: 100;
+            opacity: 0;
+            animation: fadeInChat 0.6s ease-out 4.5s forwards;
+        }
+        
+        @keyframes fadeInChat {
+            0% { opacity: 0; transform: translateY(20px) scale(0.98); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        
+        .chat-header {
+            padding: 24px 24px 16px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .chat-header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 15%;
+            right: 15%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), rgba(200, 180, 255, 0.5), rgba(255, 255, 255, 0.3), transparent);
+        }
+        
+        .chat-header h1 {
+            font-size: 32px;
+            color: white;
+            text-shadow: 0 2px 15px rgba(200, 180, 255, 0.5);
+            letter-spacing: 2px;
+            font-weight: 400;
+            margin-bottom: 6px;
+        }
+        
+        .chat-header h1 span {
+            font-size: 28px;
+            opacity: 0.9;
+        }
+        
+        .chat-header p {
+            font-size: 15px;
+            color: rgba(230, 220, 250, 0.9);
+            font-style: italic;
+            letter-spacing: 1px;
+        }
+        
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 24px;
+            scroll-behavior: smooth;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        
+        .chat-messages::-webkit-scrollbar {
+            width: 4px;
+        }
+        
+        .chat-messages::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+        }
+        
+        .message {
+            display: flex;
+            flex-direction: column;
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .message.user {
+            align-items: flex-end;
+        }
+        
+        .message.bot {
+            align-items: flex-start;
+        }
+        
+        .message-card {
+            max-width: 70%;
+            padding: 18px 24px;
+            border-radius: 32px;
+            font-size: 16px;
+            line-height: 1.6;
+            word-wrap: break-word;
+            position: relative;
+            /* 更柔和的內陰影與外光暈 */
+            box-shadow: inset 0 0 12px rgba(255,255,255,0.5), 0 10px 30px rgba(0, 0, 0, 0.1), 0 0 25px rgba(255,255,255,0.3);
+            transition: all 0.2s ease;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            margin-bottom: 8px;
+            /* 使用漸層和半透明度讓泡泡色更豐富 */
+            background: linear-gradient(135deg, rgba(255,255,255,0.8) 0%, rgba(240,240,255,0.6) 100%);
+            /* 飄浮動畫 */
+            animation: floatBubble 6s ease-in-out infinite;
+            /* 字體更柔和 */
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #333;
+        }
+
+        /* 補充：閃爍小光點 */
+        .message-card::before,
+        .message-card::after {
+            content: '';
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: rgba(255,255,255,0.8);
+            border-radius: 50%;
+            filter: blur(2px);
+            animation: sparkle 3s infinite ease-in-out;
+            opacity: 0;
+        }
+
+        .message-card::before {
+            top: 10px;
+            left: 10px;
+            animation-delay: 0s;
+        }
+
+        .message-card::after {
+            bottom: 10px;
+            right: 12px;
+            animation-delay: 1.5s;
+        }
+
+        @keyframes sparkle {
+            0%,100% { opacity: 0; transform: scale(0.5); }
+            50% { opacity: 1; transform: scale(1.2); }
+        }
+
+        @keyframes floatBubble {
+            0%,100% { transform: translateY(0); }
+            50% { transform: translateY(-4px); }
+        }
+        
+        .message-card:hover {
+            /* 加強互動：放大並閃爍光暈 */
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.25), 0 0 12px rgba(255,255,255,0.6);
+        }
+        
+        .user .message-card {
+            background: rgba(255,255,255,0.7);
+            color: #333;
+            border-bottom-right-radius: 6px;
+            border: 1px solid rgba(200, 200, 200, 0.4);
+        }
+        
+        .user .message-card::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            right: -6px;
+            width: 20px;
+            height: 20px;
+            background: rgba(255,255,255,0.7);
+            border-radius: 50%;
+            filter: blur(4px);
+        }
+        
+        .bot .message-card {
+            background: rgba(230, 220, 255, 0.6);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            color: #333;
+            border-bottom-left-radius: 6px;
+            border: 1px solid rgba(200, 180, 240, 0.5);
+            box-shadow: 0 10px 25px rgba(120, 90, 180, 0.2), 0 0 15px rgba(255,255,255,0.4);
+        }
+        
+        .bot .message-card::before {
+            content: '✦';
+            position: absolute;
+            left: -8px;
+            top: -8px;
+            font-size: 18px;
+            color: rgba(255, 255, 255, 0.7);
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+            animation: twinkleStar 2s infinite;
+        }
+        
+        .bot .message-card::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: -6px;
+            width: 20px;
+            height: 20px;
+            background: rgba(230,220,255,0.6);
+            border-radius: 50%;
+            filter: blur(4px);
+        }
+        
+        @keyframes twinkleStar {
+            0%, 100% { opacity: 0.5; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.2); }
+        }
+        
+        .welcome-card {
+            background: rgba(180, 150, 210, 0.3) !important;
+            border: 1px solid rgba(255, 255, 255, 0.4) !important;
+            box-shadow: 0 8px 25px rgba(140, 100, 180, 0.3) !important;
+        }
+        
+        .typing-indicator {
+            display: none;
+            padding: 14px 20px;
+            background: rgba(150, 120, 180, 0.2);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 30px;
+            width: fit-content;
+            margin-left: 24px;
+            margin-bottom: 8px;
+            border: 1px solid rgba(220, 200, 255, 0.2);
+        }
+        
+        .typing-indicator span {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: white;
+            border-radius: 50%;
+            margin: 0 3px;
+            animation: typing 1.4s infinite;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+        
+        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+        
+        @keyframes typing {
+            0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+            30% { transform: translateY(-8px); opacity: 1; }
+        }
+        
+        .chat-input {
+            display: flex;
+            padding: 20px 24px;
+            background: rgba(20, 15, 35, 0.3);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            gap: 12px;
+        }
+        
+        .chat-input input {
+            flex: 1;
+            padding: 14px 20px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 40px;
+            outline: none;
+            font-size: 15px;
+            color: white;
+            transition: all 0.3s;
+        }
+        
+        .chat-input input::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+            font-style: italic;
+        }
+        
+        .chat-input input:focus {
+            background: rgba(255, 255, 255, 0.12);
+            border-color: rgba(220, 200, 255, 0.4);
+            box-shadow: 0 0 20px rgba(160, 130, 200, 0.2);
+        }
+        
+        .chat-input button {
+            padding: 14px 32px;
+            background: linear-gradient(135deg, rgba(160, 130, 200, 0.4), rgba(120, 90, 160, 0.4));
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 40px;
+            color: white;
+            font-size: 15px;
+            font-weight: 500;
+            letter-spacing: 1px;
+            transition: all 0.3s;
+            cursor: pointer;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .chat-input button:hover {
+            background: linear-gradient(135deg, rgba(180, 150, 220, 0.5), rgba(140, 110, 180, 0.5));
+            transform: scale(1.02);
+            border-color: rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 25px rgba(160, 130, 200, 0.3);
+        }
+        
+        .tip-button {
+            position: absolute;
+            bottom: 100px;
+            right: 30px;
+            background: rgba(150, 120, 180, 0.25);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50px;
+            padding: 12px 24px;
+            color: white;
+            font-size: 14px;
+            cursor: pointer;
+            z-index: 1000;
+            opacity: 0;
+            animation: fadeInTip 0.6s ease-out 5s forwards;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            letter-spacing: 1px;
+        }
+        
+        @keyframes fadeInTip {
+            0% { opacity: 0; transform: translateY(10px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+        
+        .tip-button:hover {
+            background: rgba(170, 140, 200, 0.35);
+            transform: translateY(-3px);
+            border-color: rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 25px rgba(160, 130, 200, 0.3);
+        }
+        
+        @media (max-width: 600px) {
+            .chat-container {
+                height: 90vh;
+                border-radius: 32px;
+            }
+            
+            .chat-header h1 { font-size: 26px; }
+            .chat-header h1 span { font-size: 22px; }
+            .chat-header p { font-size: 13px; }
+            
+            .message-card { 
+                max-width: 85%; 
+                padding: 14px 18px;
+                font-size: 14px; 
+            }
+            
+            .tip-button { 
+                bottom: 120px; 
+                right: 15px; 
+                padding: 10px 18px; 
+                font-size: 13px; 
+            }
+            
+            .page-icon { 
+                width: 70px; 
+                height: 70px; 
+                top: 20px; 
+                right: 20px; 
+            }
+            
+            .splash-title { font-size: 36px; }
+            .splash-subtitle { font-size: 18px; }
+            .text-overlay { margin-bottom: 60px; }
+            .progress-bar { width: 250px; }
+        }
+        
+        @media (max-width: 400px) {
+            .page-icon { width: 60px; height: 60px; top: 15px; right: 15px; }
+            .splash-title { font-size: 28px; }
+            .splash-subtitle { font-size: 16px; }
+            .progress-bar { width: 200px; }
+            .text-overlay { margin-bottom: 40px; }
+            
+            .chat-header h1 { font-size: 22px; }
+            .chat-header h1 span { font-size: 18px; }
+            .chat-header p { font-size: 12px; }
+        }
+    </style>
+</head>
+<body>
+    <!-- 進入動畫 - 影片背景匹配漸層 -->
+    <div class="splash-screen" id="splashScreen">
+        <div class="star-container" id="starContainer"></div>
+        
+        <!-- 影片容器 - 背景繼承漸層 -->
+        <div class="video-container" id="videoContainer">
+            <video class="splash-video" autoplay muted playsinline loop>
+                <source src="/static/AE立繪動態.mp4" type="video/mp4">
+                <!-- 備用圖片 -->
+                <img src="/static/c.png" alt="Morpheia" style="width:100%; height:100%; object-fit:contain;">
+            </video>
+        </div>
+        
+        <div class="text-overlay">
+            <h1 class="splash-title">Morpheia</h1>
+            <div class="splash-subtitle">療癒精靈 · 溫柔陪伴</div>
+            <div class="progress-bar">
+                <div class="progress-fill"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 右上角 icon -->
+    <div class="page-icon" id="pageIcon" onclick="showIconMessage()" title="點我與 Morpheia 聊聊">
+        <img src="/static/icon.png" alt="Morpheia Icon" onerror="this.style.display='none'">
+    </div>
+    
+    <!-- 對話框 -->
+    <div class="chat-container">
+        <div class="chat-header">
+            <h1>✨ Morpheia <span>療癒精靈</span></h1>
+            <p>溫柔陪伴 · 傾聽你的心</p>
+        </div>
+        
+        <div class="chat-messages" id="chatMessages">
+            <div class="message bot">
+                <div class="message-card welcome-card" id="welcomeMessage">
+                    {{ welcome_message }}
+                </div>
+            </div>
+        </div>
+        
+        <div class="typing-indicator" id="typingIndicator">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+        
+        <div class="chat-input">
+            <input type="text" id="userInput" placeholder="寫下你的心情..." autocomplete="off">
+            <button onclick="sendMessage()">發送 ✦</button>
+        </div>
+    </div>
+    
+    <button class="tip-button" onclick="showWarmPerspective()">
+        <span>🌿</span> 溫暖小語
+    </button>
+
+    <script>
+        // 產生星星
+        function createStars() {
+            const starContainer = document.getElementById('starContainer');
+            for (let i = 0; i < 50; i++) {
+                const star = document.createElement('div');
+                star.className = 'splash-star';
+                
+                const size = Math.random() * 5 + 1;
+                star.style.width = size + 'px';
+                star.style.height = size + 'px';
+                
+                star.style.left = Math.random() * 100 + '%';
+                star.style.top = Math.random() * 100 + '%';
+                
+                star.style.animationDelay = Math.random() * 3 + 's';
+                star.style.animationDuration = (Math.random() * 3 + 2) + 's';
+                
+                starContainer.appendChild(star);
+            }
+        }
+        
+        // 設定影片
+        function setupVideo() {
+            const video = document.querySelector('.splash-video');
+            if (video) {
+                // 設定影片背景繼承父層的漸層
+                video.style.background = 'inherit';
+                
+                video.play().catch(e => {
+                    console.log('影片自動播放失敗，使用備用圖片');
+                    const container = document.querySelector('.video-container');
+                    if (container) {
+                        container.innerHTML = '<img src="/static/c.png" alt="Morpheia" style="width:100%; height:100%; object-fit:contain;">';
+                    }
+                });
+            }
+        }
+        
+        // 頁面載入
+        window.onload = function() {
+            createStars();
+            setupVideo();
+            
+            setTimeout(() => {
+                const splash = document.getElementById('splashScreen');
+                if (splash) {
+                    splash.style.display = 'none';
+                    const video = document.querySelector('.splash-video');
+                    if (video) video.pause();
+                }
+            }, 5000);
+        };
+        
+        // 聊天功能
+        const chatMessages = document.getElementById('chatMessages');
+        const userInput = document.getElementById('userInput');
+        const typingIndicator = document.getElementById('typingIndicator');
+        const welcomeMessage = document.getElementById('welcomeMessage');
+
+        userInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        async function sendMessage() {
+            const message = userInput.value.trim();
+            if (!message) return;
+
+            addMessage(message, 'user');
+            userInput.value = '';
+            typingIndicator.style.display = 'block';
+            scrollToBottom();
+
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ message: message })
+                });
+
+                const data = await response.json();
+                typingIndicator.style.display = 'none';
+                
+                if (data.status === 'success') {
+                    addMessage(data.response, 'bot');
+                } else {
+                    addMessage('✨ ' + data.response, 'bot');
+                }
+            } catch (error) {
+                typingIndicator.style.display = 'none';
+                addMessage('✨ 再試一次好嗎？', 'bot');
+            }
+            scrollToBottom();
+        }
+
+        function addMessage(text, sender) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}`;
+            
+            const cardDiv = document.createElement('div');
+            cardDiv.className = 'message-card';
+            cardDiv.textContent = text;
+            
+            messageDiv.appendChild(cardDiv);
+            chatMessages.appendChild(messageDiv);
+            scrollToBottom();
+        }
+
+        function scrollToBottom() {
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function showIconMessage() {
+            const messages = [
+                "✨ 我在這裡陪你～",
+                "🌙 看見你了，慢慢來。",
+                "🦋 你願意分享，已經很勇敢。",
+                "💫 今天的心情是什麼顏色？"
+            ];
+            addMessage(messages[Math.floor(Math.random() * messages.length)], 'bot');
+        }
+
+        function showWarmPerspective() {
+            const tips = [
+                "🌱 想法不等於事實，它們只是路過的思想。",
+                "🌸 對自己溫柔一點，你已經做得很好了。",
+                "🌙 情緒會來，也會走，就像雲會飄過天空。",
+                "🦋 你值得被溫柔對待，包括被自己溫柔對待。"
+            ];
+            addMessage(tips[Math.floor(Math.random() * tips.length)], 'bot');
+        }
+
+        // 圖片錯誤處理
+        document.querySelectorAll('.page-icon img').forEach(img => {
+            img.onerror = function() {
+                this.style.display = 'none';
+                const iconDiv = this.parentElement;
+                iconDiv.innerHTML = '✨';
+                iconDiv.style.fontSize = '50px';
+                iconDiv.style.display = 'flex';
+                iconDiv.style.alignItems = 'center';
+                iconDiv.style.justifyContent = 'center';
+                iconDiv.style.background = 'rgba(255, 255, 255, 0.15)';
+            };
+        });
+
+        // 按下時短暫跳動
+        const pageIcon = document.getElementById('pageIcon');
+        pageIcon.addEventListener('click', () => {
+            pageIcon.classList.add('clicked');
+            setTimeout(() => pageIcon.classList.remove('clicked'), 400);
+        });
+    </script>
+</body>
+</html>
