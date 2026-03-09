@@ -1,0 +1,10 @@
+# 核心框架
+Flask>=2.3.0
+openai>=1.0.0
+python-dotenv>=1.0.0
+requests>=2.31.0
+gunicorn>=20.1.0  # 用於生產環境
+
+# 其他依賴（如果你有用到的話）
+# numpy>=1.24.0
+# pandas>=2.0.0
