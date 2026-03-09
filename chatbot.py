@@ -1,18 +1,15 @@
 import os
 from openai import OpenAI
-from dotenv import load_dotenv
 import random
 import re
-
-# 載入環境變數
-load_dotenv()
 
 class DeepSeekChatbot:
     def __init__(self):
         """初始化療癒精靈"""
+        # 直接從環境變數讀取 API Key
         self.api_key = os.getenv("IFLOW_API_KEY")
         if not self.api_key:
-            raise ValueError("請在.env檔案中設定IFLOW_API_KEY")
+            raise ValueError("請設定 IFLOW_API_KEY 環境變數")
         
         print(f"🔑 使用API Key: {self.api_key[:10]}...")
         
@@ -170,11 +167,9 @@ class DeepSeekChatbot:
             
             # 非常短的訊息（少於5個字）
             if word_count < 5:
-                # 如果有偵測到情緒，給情緒回應
                 if emotion:
                     response = self.get_response_by_emotion(emotion)
                 else:
-                    # 隨機選擇短訊息回應，不會每次都同一句
                     response = random.choice(self.short_responses)
                 
                 self.conversation_history.append({"role": "user", "content": user_message})
@@ -189,10 +184,8 @@ class DeepSeekChatbot:
 
 請用繁體中文回應，像一個溫柔的朋友，每次回應都要不一樣。"""
             
-            # 準備訊息
             messages = [{"role": "system", "content": prompt}]
             
-            # 加入最近對話
             if self.conversation_history:
                 recent_history = self.conversation_history[-6:]
                 messages.extend(recent_history)
@@ -201,7 +194,6 @@ class DeepSeekChatbot:
             
             print(f"📤 發送給 Morpheia...")
             
-            # 調用API
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=messages,
@@ -211,7 +203,6 @@ class DeepSeekChatbot:
             
             assistant_message = response.choices[0].message.content
             
-            # 保存歷史
             self.conversation_history.append({"role": "user", "content": user_message})
             self.conversation_history.append({"role": "assistant", "content": assistant_message})
             
@@ -225,17 +216,3 @@ class DeepSeekChatbot:
         """清除對話歷史"""
         self.conversation_history = []
         return "✨ 我們重新開始吧～"
-
-# 測試用 - 注意這裡沒有 import 自己
-if __name__ == "__main__":
-    bot = DeepSeekChatbot()
-    print("🧪 療癒精靈測試模式")
-    print("輸入 'quit' 退出")
-    print("-" * 50)
-    
-    while True:
-        user_input = input("\n你: ").strip()
-        if user_input.lower() in ['quit', 'exit', 'q']:
-            break
-        response = bot.chat(user_input)
-        print(f"\nMorpheia: {response}")
