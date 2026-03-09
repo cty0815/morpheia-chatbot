@@ -3,12 +3,10 @@ __pycache__/
 *.py[cod]
 venv/
 env/
-*.so
 
-# Environment Variables
+# Environment
 .env
 .env.local
-.streamlit/secrets.toml
 
 # IDE
 .vscode/
