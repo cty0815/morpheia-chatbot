@@ -1,8 +1,8 @@
+import os
 from flask import Flask, render_template, request, jsonify
 from chatbot import DeepSeekChatbot
 import logging
 import traceback
-import os  # 新增：需要讀取環境變數
 
 # 設置日誌
 logging.basicConfig(level=logging.INFO)
@@ -17,12 +17,10 @@ try:
         bot = None
         welcome_message = "✨ 你來啦～今天過得怎麼樣？"
     else:
-        # 可以在這裡傳入 API key，或者讓 chatbot.py 自己讀取環境變數
-        # 如果你的 chatbot.py 會自己讀 .env，這行就不需要改
+        # 可以選擇傳入 API key 或在 chatbot.py 中讀取環境變數
         bot = DeepSeekChatbot()
         welcome_message = bot.get_welcome_message()
         logging.info("✅ 療癒精靈初始化成功")
-        
 except Exception as e:
     logging.error(f"❌ 初始化失敗：{e}")
     logging.error(traceback.format_exc())
@@ -82,7 +80,6 @@ def health_check():
     })
 
 if __name__ == '__main__':
-    # 雲端部署需要從環境變數讀取 port，預設 5000
+    # 生產環境設定
     port = int(os.getenv("PORT", 5000))
-    # 生產環境關閉 debug 模式
     app.run(host='0.0.0.0', port=port, debug=False)
